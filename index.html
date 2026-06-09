@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track — Gestión de Clientes y Proyectos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+
+    :root {
+      --accent: #6366f1;
+      --accent2: #8b5cf6;
+      --accent3: #06b6d4;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: #030712;
+      color: #f1f5f9;
+      overflow-x: hidden;
+    }
+
+    /* ── Canvas BG ── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    section, nav, footer { position: relative; z-index: 2; }
+
+    /* ── Gradient text ── */
+    .grad { background: linear-gradient(135deg, #818cf8, #c084fc, #22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .grad2 { background: linear-gradient(135deg, #22d3ee, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ── Glass card ── */
+    .glass {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      transition: all .35s ease;
+    }
+    .glass:hover {
+      background: rgba(99,102,241,0.1);
+      border-color: rgba(99,102,241,0.35);
+      transform: translateY(-4px);
+      box-shadow: 0 24px 48px rgba(99,102,241,0.12);
+    }
+
+    /* ── Glow button ── */
+    .btn-glow {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      box-shadow: 0 0 24px rgba(99,102,241,0.45);
+      transition: all .3s ease;
+    }
+    .btn-glow:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 40px rgba(99,102,241,0.7);
+    }
+
+    /* ── Feature icon ── */
+    .feat-icon {
+      width: 52px; height: 52px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 14px;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    /* ── Timeline ── */
+    .timeline-dot {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      box-shadow: 0 0 20px rgba(99,102,241,0.5);
+      flex-shrink: 0;
+      font-size: 16px;
+    }
+
+    /* ── Pill badge ── */
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 999px;
+      font-size: 12px; font-weight: 600; letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    /* ── Reveal animations ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-left {
+      opacity: 0;
+      transform: translateX(-50px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+    .reveal-left.visible { opacity: 1; transform: translateX(0); }
+
+    .reveal-right {
+      opacity: 0;
+      transform: translateX(50px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+    .reveal-right.visible { opacity: 1; transform: translateX(0); }
+
+    /* ── Stagger delay ── */
+    .d1 { transition-delay: .1s; }
+    .d2 { transition-delay: .2s; }
+    .d3 { transition-delay: .3s; }
+    .d4 { transition-delay: .4s; }
+    .d5 { transition-delay: .5s; }
+
+    /* ── Hero badge pulse ── */
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(99,102,241,.6); }
+      70%  { box-shadow: 0 0 0 12px rgba(99,102,241,0); }
+      100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+    }
+    .pulse-ring { animation: pulse-ring 2.2s ease infinite; }
+
+    /* ── Floating animation ── */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-12px); }
+    }
+    .float-anim { animation: float 4s ease-in-out infinite; }
+
+    /* ── Progress bar animate ── */
+    @keyframes grow-bar {
+      from { width: 0; }
+      to   { width: var(--w); }
+    }
+    .bar-animated { animation: grow-bar 1.4s ease forwards; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0f1e; }
+    ::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 99px; }
+
+    /* ── Nav ── */
+    .nav-blur {
+      background: rgba(3,7,18,.75);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    /* ── Section divider ── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,.4), transparent);
+    }
+
+    /* ── Stats counter ── */
+    .counter {
+      font-size: 3rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    /* ── Mock UI ── */
+    .mock-wrap {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 40px 80px rgba(0,0,0,.6), 0 0 60px rgba(99,102,241,.12);
+    }
+    .mock-titlebar {
+      background: rgba(15,20,40,0.95);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .mock-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+    /* ── Radial accent ── */
+    .radial-accent {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+
+    /* ── Chat bubbles ── */
+    .chat-bubble-demo {
+      padding: 10px 16px;
+      border-radius: 18px;
+      font-size: 14px;
+      max-width: 260px;
+      line-height: 1.5;
+    }
+
+    /* ── Step connector ── */
+    .step-line {
+      position: absolute;
+      top: 20px;
+      left: calc(50% + 20px);
+      right: calc(-50% + 20px);
+      height: 2px;
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      opacity: .35;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     CANVAS BACKGROUND
+═══════════════════════════════════════════════════════ -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- ═══════════════════════════════════════════════════════
+     NAVBAR
+═══════════════════════════════════════════════════════ -->
+<nav class="nav-blur fixed top-0 inset-x-0 z-50 py-4 px-6">
+  <div class="max-w-7xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/40">
+        <svg class="w-5 h-5" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="3.5" cy="15" r="2" fill="white" opacity="0.5"/>
+          <circle cx="10" cy="9" r="2" fill="white" opacity="0.8"/>
+          <circle cx="16.5" cy="3.5" r="2.5" fill="white"/>
+          <path d="M3.5 15 L10 9 L16.5 3.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="text-lg font-bold tracking-tight">Track</span>
+    </div>
+    <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+      <a href="#funciones" class="hover:text-white transition-colors">Funciones</a>
+      <a href="#admin" class="hover:text-white transition-colors">Panel Admin</a>
+      <a href="#cliente" class="hover:text-white transition-colors">Portal Cliente</a>
+      <a href="#como-funciona" class="hover:text-white transition-colors">Cómo funciona</a>
+    </div>
+    <a href="#contacto" class="btn-glow text-white text-sm font-semibold px-5 py-2.5 rounded-xl">
+      Solicitar demo
+    </a>
+  </div>
+</nav>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════════════════ -->
+<section class="relative min-h-screen flex items-center pt-24 pb-16 overflow-hidden">
+
+  <!-- radial glows -->
+  <div class="radial-accent w-[600px] h-[600px] bg-indigo-600/20 -top-32 -left-32"></div>
+  <div class="radial-accent w-[500px] h-[500px] bg-violet-600/15 top-1/2 -right-32"></div>
+  <div class="radial-accent w-[400px] h-[400px] bg-cyan-500/10 bottom-0 left-1/2 -translate-x-1/2"></div>
+
+  <div class="max-w-7xl mx-auto px-6 w-full">
+    <div class="grid md:grid-cols-2 gap-12 items-center">
+
+      <!-- LEFT: mockup -->
+      <div class="reveal-left float-anim order-2 md:order-1">
+      <div class="mock-wrap">
+        <div class="mock-titlebar">
+          <div class="mock-dot bg-red-400"></div>
+          <div class="mock-dot bg-yellow-400"></div>
+          <div class="mock-dot bg-green-400"></div>
+          <span class="ml-3 text-slate-500 text-xs font-medium">Track — Panel de Control</span>
+        </div>
+        <div class="bg-[#0b1120] p-6 grid grid-cols-4 gap-4">
+          <!-- sidebar mock -->
+          <div class="col-span-1 bg-[#0f1729] rounded-xl p-4 space-y-2">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-3">Panel Admin</div>
+            <div class="flex items-center gap-2 bg-indigo-500/20 rounded-lg px-3 py-2 text-indigo-300 text-xs font-medium">
+              <span>📈</span> Dashboard
+            </div>
+            <div class="flex items-center gap-2 text-slate-500 text-xs px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+              <span>👥</span> Clientes
+            </div>
+            <div class="flex items-center gap-2 text-slate-500 text-xs px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+              <span>⚙️</span> Workflows
+            </div>
+            <div class="flex items-center gap-2 text-slate-500 text-xs px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+              <span>📅</span> Reuniones
+            </div>
+            <div class="flex items-center gap-2 text-slate-500 text-xs px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+              <span>💬</span> Chat
+            </div>
+          </div>
+          <!-- content mock -->
+          <div class="col-span-3 space-y-4">
+            <div class="grid grid-cols-3 gap-3">
+              <div class="bg-[#0f1729] rounded-xl p-4 border border-indigo-500/20">
+                <div class="text-xs text-slate-500 mb-1">Total clientes</div>
+                <div class="text-2xl font-black text-white">24</div>
+                <div class="text-xs text-emerald-400 mt-1">↑ +3 este mes</div>
+              </div>
+              <div class="bg-[#0f1729] rounded-xl p-4 border border-violet-500/20">
+                <div class="text-xs text-slate-500 mb-1">Activos</div>
+                <div class="text-2xl font-black text-white">18</div>
+                <div class="text-xs text-indigo-400 mt-1">⚡ En progreso</div>
+              </div>
+              <div class="bg-[#0f1729] rounded-xl p-4 border border-cyan-500/20">
+                <div class="text-xs text-slate-500 mb-1">Finalizados</div>
+                <div class="text-2xl font-black text-white">6</div>
+                <div class="text-xs text-cyan-400 mt-1">🏁 Completados</div>
+              </div>
+            </div>
+            <div class="bg-[#0f1729] rounded-xl p-4">
+              <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-3">Clientes recientes</div>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between py-2 border-b border-white/5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold">M</div>
+                    <div class="text-xs">
+                      <div class="text-white font-medium">María García</div>
+                      <div class="text-slate-500">García & Co.</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 bg-emerald-500/15 text-emerald-400 rounded-full text-xs">Activo</span>
+                </div>
+                <div class="flex items-center justify-between py-2 border-b border-white/5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-full bg-violet-500 flex items-center justify-center text-xs font-bold">J</div>
+                    <div class="text-xs">
+                      <div class="text-white font-medium">Juan Pérez</div>
+                      <div class="text-slate-500">Tech Solutions</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 bg-emerald-500/15 text-emerald-400 rounded-full text-xs">Activo</span>
+                </div>
+                <div class="flex items-center justify-between py-2">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-xs font-bold">A</div>
+                    <div class="text-xs">
+                      <div class="text-white font-medium">Ana Martínez</div>
+                      <div class="text-slate-500">Startup Hub</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 bg-slate-500/20 text-slate-400 rounded-full text-xs">Inactivo</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+      <!-- RIGHT: text -->
+      <div class="order-1 md:order-2 flex flex-col">
+
+        <!-- badge -->
+        <div class="reveal inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/25 rounded-full px-5 py-2 mb-8 text-sm font-medium text-indigo-300 pulse-ring w-fit">
+          <span class="w-2 h-2 rounded-full bg-indigo-400 inline-block"></span>
+          Sistema de gestión profesional
+        </div>
+
+        <h1 class="reveal d1 text-5xl md:text-6xl font-black leading-[1.05] tracking-tight mb-6">
+          Tus clientes ven<br>
+          <span class="grad">cada paso de su proyecto.</span>
+        </h1>
+
+        <p class="reveal d2 text-lg text-slate-400 leading-relaxed mb-10 max-w-lg">
+          Track da a cada cliente visibilidad total sobre el avance de su trabajo — en tiempo real, desde su propio panel personalizado.
+        </p>
+
+        <div class="reveal d3 flex flex-col sm:flex-row gap-4">
+          <a href="#funciones" class="btn-glow text-white font-semibold px-8 py-4 rounded-2xl text-base inline-flex items-center gap-2">
+            Ver todas las funciones
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </a>
+          <a href="#como-funciona" class="glass text-white font-semibold px-8 py-4 rounded-2xl text-base inline-flex items-center gap-2 hover:bg-white/10">
+            Cómo funciona
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- divider -->
+<div class="divider max-w-5xl mx-auto"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     STATS
+═══════════════════════════════════════════════════════ -->
+<section class="py-20 px-6">
+  <div class="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+    <div class="reveal">
+      <div class="counter grad mb-1" data-target="100">0</div>
+      <div class="text-slate-500 text-sm font-medium">% Control de proyectos</div>
+    </div>
+    <div class="reveal d1">
+      <div class="counter grad mb-1" data-target="2">0</div>
+      <div class="text-slate-500 text-sm font-medium">Paneles independientes</div>
+    </div>
+    <div class="reveal d2">
+      <div class="counter grad mb-1" data-target="5">0</div>
+      <div class="text-slate-500 text-sm font-medium">Módulos integrados</div>
+    </div>
+    <div class="reveal d3">
+      <div class="counter grad mb-1" data-target="8">0</div>
+      <div class="text-slate-500 text-sm font-medium">Seg. actualización chat</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider max-w-5xl mx-auto"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURE OVERVIEW
+═══════════════════════════════════════════════════════ -->
+<section id="funciones" class="py-24 px-6">
+  <div class="max-w-6xl mx-auto">
+
+    <div class="text-center mb-16">
+      <div class="reveal pill bg-violet-500/10 border border-violet-500/25 text-violet-300 mb-6">
+        ✦ Funcionalidades
+      </div>
+      <h2 class="reveal d1 text-4xl md:text-5xl font-black tracking-tight mb-4">
+        Todo lo que necesitás<br><span class="grad2">para gestionar tu negocio</span>
+      </h2>
+      <p class="reveal d2 text-slate-400 text-lg max-w-2xl mx-auto">
+        Dos paneles independientes — uno para el administrador y otro para cada cliente — perfectamente sincronizados.
+      </p>
+    </div>
+
+    <!-- big feature grid -->
+    <div class="grid md:grid-cols-3 gap-5">
+
+      <div class="reveal glass rounded-2xl p-6 col-span-1">
+        <div class="feat-icon bg-indigo-500/15 text-2xl mb-5">📊</div>
+        <h3 class="text-lg font-bold mb-2">Dashboard en tiempo real</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Visualizá métricas clave al instante: total de clientes, activos, proyectos finalizados y tabla de clientes recientes.</p>
+      </div>
+
+      <div class="reveal d1 glass rounded-2xl p-6 col-span-1">
+        <div class="feat-icon bg-violet-500/15 text-2xl mb-5">👥</div>
+        <h3 class="text-lg font-bold mb-2">Gestión completa de clientes</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Creá, editá y filtrá clientes. Búsqueda en tiempo real por nombre, email o empresa. Activar / desactivar con un click.</p>
+      </div>
+
+      <div class="reveal d2 glass rounded-2xl p-6 col-span-1">
+        <div class="feat-icon bg-cyan-500/15 text-2xl mb-5">⚙️</div>
+        <h3 class="text-lg font-bold mb-2">Workflows personalizados</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Definí procesos con etapas a medida. Asignalos a cada cliente y actualizá su estado: Pendiente, En progreso o Completado.</p>
+      </div>
+
+      <div class="reveal d1 glass rounded-2xl p-6 col-span-1">
+        <div class="feat-icon bg-emerald-500/15 text-2xl mb-5">📅</div>
+        <h3 class="text-lg font-bold mb-2">Agenda de reuniones</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Programá reuniones virtuales o presenciales y asignalas a clientes. Vista de calendario mensual y lista, con colores por cliente.</p>
+      </div>
+
+      <div class="reveal d2 glass rounded-2xl p-6 col-span-1">
+        <div class="feat-icon bg-pink-500/15 text-2xl mb-5">💬</div>
+        <h3 class="text-lg font-bold mb-2">Chat directo integrado</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Mensajería en tiempo real entre admin y cada cliente. Badges de mensajes no leídos con actualización automática cada 8 segundos.</p>
+      </div>
+
+      <div class="reveal d3 glass rounded-2xl p-6 col-span-1">
+        <div class="feat-icon bg-amber-500/15 text-2xl mb-5">📥</div>
+        <h3 class="text-lg font-bold mb-2">Entrega de trabajos</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Compartí el trabajo terminado con un link de Google Drive. El cliente ve un botón prominente para descargar su entrega.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider max-w-5xl mx-auto"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     ADMIN PANEL DEEP DIVE
+═══════════════════════════════════════════════════════ -->
+<section id="admin" class="py-24 px-6 overflow-hidden">
+  <div class="max-w-6xl mx-auto">
+
+    <div class="text-center mb-16">
+      <div class="reveal pill bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 mb-6">
+        🛡️ Panel Administrador
+      </div>
+      <h2 class="reveal d1 text-4xl md:text-5xl font-black tracking-tight mb-4">
+        Control total<br><span class="grad">desde un panel unificado</span>
+      </h2>
+      <p class="reveal d2 text-slate-400 text-lg max-w-2xl mx-auto">
+        El panel de administración te da visibilidad y control sobre cada aspecto de tu operación.
+      </p>
+    </div>
+
+    <!-- Module 1: Dashboard -->
+    <div class="grid md:grid-cols-2 gap-12 items-center mb-24">
+      <div class="reveal-left">
+        <span class="pill bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs mb-4 inline-flex">📈 Dashboard</span>
+        <h3 class="text-3xl font-black mb-4">Métricas al instante</h3>
+        <p class="text-slate-400 leading-relaxed mb-6">Un vistazo completo de tu negocio apenas abrís el sistema. Tarjetas con totales, clientes activos y proyectos finalizados, más la tabla de los clientes más recientes.</p>
+        <ul class="space-y-3">
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-xs">✓</span>
+            Total de clientes registrados
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-xs">✓</span>
+            Clientes activos en curso
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-xs">✓</span>
+            Proyectos finalizados
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-xs">✓</span>
+            Tabla de clientes recientes con estado
+          </li>
+        </ul>
+      </div>
+      <div class="reveal-right">
+        <div class="mock-wrap">
+          <div class="mock-titlebar">
+            <div class="mock-dot bg-red-400"></div>
+            <div class="mock-dot bg-yellow-400"></div>
+            <div class="mock-dot bg-green-400"></div>
+            <span class="ml-2 text-slate-500 text-xs">Dashboard</span>
+          </div>
+          <div class="bg-[#0b1120] p-5 space-y-4">
+            <div class="grid grid-cols-3 gap-3">
+              <div class="bg-[#111827] rounded-xl p-4 border border-indigo-500/20 text-center">
+                <div class="text-2xl font-black text-white">24</div>
+                <div class="text-xs text-slate-500 mt-1">Total clientes</div>
+              </div>
+              <div class="bg-[#111827] rounded-xl p-4 border border-emerald-500/20 text-center">
+                <div class="text-2xl font-black text-emerald-400">18</div>
+                <div class="text-xs text-slate-500 mt-1">Activos</div>
+              </div>
+              <div class="bg-[#111827] rounded-xl p-4 border border-cyan-500/20 text-center">
+                <div class="text-2xl font-black text-cyan-400">6</div>
+                <div class="text-xs text-slate-500 mt-1">Finalizados</div>
+              </div>
+            </div>
+            <div class="bg-[#111827] rounded-xl p-4">
+              <div class="text-xs text-slate-500 font-semibold mb-3 uppercase tracking-wider">Clientes recientes</div>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-white text-xs">M</div>
+                    <div>
+                      <div class="text-white font-medium">María García</div>
+                      <div class="text-slate-500">García & Co.</div>
+                    </div>
+                  </div>
+                  <span class="bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full">Activo</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center font-bold text-white text-xs">J</div>
+                    <div>
+                      <div class="text-white font-medium">Juan Pérez</div>
+                      <div class="text-slate-500">Tech Solutions</div>
+                    </div>
+                  </div>
+                  <span class="bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full">Activo</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Module 2: Clients -->
+    <div class="grid md:grid-cols-2 gap-12 items-center mb-24">
+      <div class="reveal-left order-2 md:order-1">
+        <div class="mock-wrap">
+          <div class="mock-titlebar">
+            <div class="mock-dot bg-red-400"></div>
+            <div class="mock-dot bg-yellow-400"></div>
+            <div class="mock-dot bg-green-400"></div>
+            <span class="ml-2 text-slate-500 text-xs">Gestión de Clientes</span>
+          </div>
+          <div class="bg-[#0b1120] p-5 space-y-3">
+            <div class="flex gap-3">
+              <div class="flex-1 bg-[#111827] rounded-lg px-3 py-2 flex items-center gap-2">
+                <span class="text-slate-500 text-xs">🔍</span>
+                <span class="text-slate-500 text-xs">Buscar por nombre, email o empresa...</span>
+              </div>
+              <div class="flex gap-1">
+                <div class="bg-indigo-500 text-white rounded-lg px-3 py-1 text-xs font-medium">Todos</div>
+                <div class="bg-[#111827] text-slate-400 rounded-lg px-3 py-1 text-xs">Activos</div>
+                <div class="bg-[#111827] text-slate-400 rounded-lg px-3 py-1 text-xs">Inactivos</div>
+              </div>
+            </div>
+            <div class="bg-[#111827] rounded-xl overflow-hidden">
+              <table class="w-full text-xs">
+                <thead>
+                  <tr class="border-b border-white/5 text-slate-500">
+                    <th class="text-left px-4 py-2">Cliente</th>
+                    <th class="text-left px-4 py-2">Empresa</th>
+                    <th class="text-left px-4 py-2">Estado</th>
+                    <th class="text-left px-4 py-2">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="border-b border-white/5">
+                    <td class="px-4 py-2.5">
+                      <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-xs">M</div>
+                        <div>
+                          <div class="text-white font-medium">María García</div>
+                          <div class="text-slate-500">maria@co.com</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4 py-2.5 text-slate-400">García & Co.</td>
+                    <td class="px-4 py-2.5"><span class="bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full">Activo</span></td>
+                    <td class="px-4 py-2.5">
+                      <div class="flex gap-1">
+                        <div class="bg-indigo-500/20 text-indigo-400 w-6 h-6 rounded-lg flex items-center justify-center text-xs">👁️</div>
+                        <div class="bg-slate-500/10 text-slate-400 w-6 h-6 rounded-lg flex items-center justify-center text-xs">✏️</div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-2.5">
+                      <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center text-white font-bold text-xs">J</div>
+                        <div>
+                          <div class="text-white font-medium">Juan Pérez</div>
+                          <div class="text-slate-500">juan@tech.io</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4 py-2.5 text-slate-400">Tech Solutions</td>
+                    <td class="px-4 py-2.5"><span class="bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full">Activo</span></td>
+                    <td class="px-4 py-2.5">
+                      <div class="flex gap-1">
+                        <div class="bg-indigo-500/20 text-indigo-400 w-6 h-6 rounded-lg flex items-center justify-center text-xs">👁️</div>
+                        <div class="bg-slate-500/10 text-slate-400 w-6 h-6 rounded-lg flex items-center justify-center text-xs">✏️</div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="reveal-right order-1 md:order-2">
+        <span class="pill bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs mb-4 inline-flex">👥 Clientes</span>
+        <h3 class="text-3xl font-black mb-4">Gestión completa de tu cartera</h3>
+        <p class="text-slate-400 leading-relaxed mb-6">Creá nuevos clientes, editá sus datos, filtrá por estado y buscá en tiempo real. Toda la información de cada cliente en un solo lugar.</p>
+        <ul class="space-y-3">
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400 text-xs">✓</span>
+            Crear cliente con info personal y empresarial
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400 text-xs">✓</span>
+            Asignar workflow desde el inicio
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400 text-xs">✓</span>
+            Búsqueda y filtros por nombre, email, empresa
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400 text-xs">✓</span>
+            Ver progreso detallado del proyecto
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400 text-xs">✓</span>
+            Subir link de entrega del trabajo finalizado
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Module 3: Workflows -->
+    <div class="grid md:grid-cols-2 gap-12 items-center mb-24">
+      <div class="reveal-left">
+        <span class="pill bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs mb-4 inline-flex">⚙️ Workflows</span>
+        <h3 class="text-3xl font-black mb-4">Procesos a tu medida</h3>
+        <p class="text-slate-400 leading-relaxed mb-6">Diseñá los pasos de cada tipo de proyecto y asignalos a clientes. Actualizá el estado de cada etapa con notas internas para llevar un registro completo.</p>
+        <ul class="space-y-3">
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 text-xs">✓</span>
+            Crear workflows con etapas personalizadas
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 text-xs">✓</span>
+            Estado por etapa: Pendiente / En progreso / Completado
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 text-xs">✓</span>
+            Notas internas por cada etapa
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 text-xs">✓</span>
+            Asignación individual por cliente
+          </li>
+        </ul>
+      </div>
+      <div class="reveal-right">
+        <div class="mock-wrap">
+          <div class="mock-titlebar">
+            <div class="mock-dot bg-red-400"></div>
+            <div class="mock-dot bg-yellow-400"></div>
+            <div class="mock-dot bg-green-400"></div>
+            <span class="ml-2 text-slate-500 text-xs">Actualizar Progreso</span>
+          </div>
+          <div class="bg-[#0b1120] p-5 space-y-2">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-3">Workflow: Diseño Web · 4 etapas</div>
+            <div class="space-y-2">
+              <div class="bg-emerald-500/8 border border-emerald-500/20 rounded-xl p-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold">1</div>
+                  <span class="text-sm text-white font-medium">Briefing inicial</span>
+                </div>
+                <div class="flex gap-1.5">
+                  <span class="px-2.5 py-1 rounded-full text-xs bg-slate-700 text-slate-400">Pendiente</span>
+                  <span class="px-2.5 py-1 rounded-full text-xs bg-yellow-500/15 text-yellow-400">En progreso</span>
+                  <span class="px-2.5 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40">✓ Completado</span>
+                </div>
+              </div>
+              <div class="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center text-white text-xs font-bold">2</div>
+                  <span class="text-sm text-white font-medium">Diseño UI/UX</span>
+                </div>
+                <div class="flex gap-1.5">
+                  <span class="px-2.5 py-1 rounded-full text-xs bg-slate-700 text-slate-400">Pendiente</span>
+                  <span class="px-2.5 py-1 rounded-full text-xs bg-yellow-500/25 text-yellow-300 ring-1 ring-yellow-500/40">⚡ En progreso</span>
+                  <span class="px-2.5 py-1 rounded-full text-xs bg-slate-700 text-slate-400">Completado</span>
+                </div>
+              </div>
+              <div class="bg-[#111827] border border-white/5 rounded-xl p-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center text-white text-xs font-bold">3</div>
+                  <span class="text-sm text-slate-400 font-medium">Desarrollo</span>
+                </div>
+                <div class="flex gap-1.5">
+                  <span class="px-2.5 py-1 rounded-full text-xs bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/30">⏳ Pendiente</span>
+                  <span class="px-2.5 py-1 rounded-full text-xs bg-slate-700 text-slate-400">En progreso</span>
+                  <span class="px-2.5 py-1 rounded-full text-xs bg-slate-700 text-slate-400">Completado</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Module 4: Meetings -->
+    <div class="grid md:grid-cols-2 gap-12 items-center mb-24">
+      <div class="reveal-left order-2 md:order-1">
+        <div class="mock-wrap">
+          <div class="mock-titlebar">
+            <div class="mock-dot bg-red-400"></div>
+            <div class="mock-dot bg-yellow-400"></div>
+            <div class="mock-dot bg-green-400"></div>
+            <span class="ml-2 text-slate-500 text-xs">Calendario de Reuniones — Junio 2026</span>
+          </div>
+          <div class="bg-[#0b1120] p-5">
+            <div class="grid grid-cols-7 gap-1 mb-2">
+              <div class="text-center text-xs text-slate-500 py-1">Lun</div>
+              <div class="text-center text-xs text-slate-500 py-1">Mar</div>
+              <div class="text-center text-xs text-slate-500 py-1">Mié</div>
+              <div class="text-center text-xs text-slate-500 py-1">Jue</div>
+              <div class="text-center text-xs text-slate-500 py-1">Vie</div>
+              <div class="text-center text-xs text-slate-500 py-1">Sáb</div>
+              <div class="text-center text-xs text-slate-500 py-1">Dom</div>
+            </div>
+            <div class="grid grid-cols-7 gap-1">
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-slate-600">
+                <div>26</div>
+              </div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-slate-600">27</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-slate-600">28</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-slate-600">29</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-slate-600">30</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-slate-600">31</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-white font-bold">1</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-white">2</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-white">3</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-white">4</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-white">5</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-white">
+                <div>6</div>
+                <div class="bg-indigo-500/30 border-l-2 border-indigo-500 px-1 text-indigo-300 text-[9px] truncate">09:00 María</div>
+              </div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-white">7</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-white">8</div>
+              <div class="h-12 rounded-lg ring-2 ring-indigo-500 bg-indigo-500/10 p-1 text-xs text-indigo-300 font-bold">9</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-white">10</div>
+              <div class="h-12 rounded-lg bg-[#111827] p-1 text-xs text-white">
+                <div>11</div>
+                <div class="bg-violet-500/30 border-l-2 border-violet-500 px-1 text-violet-300 text-[9px] truncate">15:00 Juan</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="reveal-right order-1 md:order-2">
+        <span class="pill bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs mb-4 inline-flex">📅 Reuniones</span>
+        <h3 class="text-3xl font-black mb-4">Agenda visual con calendario</h3>
+        <p class="text-slate-400 leading-relaxed mb-6">Programá reuniones virtuales o presenciales, asignalas a clientes y visualizalas en un calendario mensual con código de colores. Cambiá entre vista de calendario y lista.</p>
+        <ul class="space-y-3">
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xs">✓</span>
+            Vista de calendario mensual interactivo
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xs">✓</span>
+            Reuniones virtuales (link) o presenciales (dirección)
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xs">✓</span>
+            Color único por cliente para identificación rápida
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xs">✓</span>
+            Notas adicionales y leyenda de clientes
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Module 5: Chat -->
+    <div class="grid md:grid-cols-2 gap-12 items-center">
+      <div class="reveal-left">
+        <span class="pill bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs mb-4 inline-flex">💬 Chat</span>
+        <h3 class="text-3xl font-black mb-4">Comunicación directa y ordenada</h3>
+        <p class="text-slate-400 leading-relaxed mb-6">Un hilo de conversación privado para cada cliente. Badgets de mensajes no leídos, auto-actualización y notificaciones en tiempo real.</p>
+        <ul class="space-y-3">
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400 text-xs">✓</span>
+            Conversación privada por cada cliente
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400 text-xs">✓</span>
+            Badges de mensajes no leídos en el sidebar
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400 text-xs">✓</span>
+            Actualización automática cada 8 segundos
+          </li>
+          <li class="flex items-center gap-3 text-sm text-slate-300">
+            <span class="w-5 h-5 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400 text-xs">✓</span>
+            Vista diferenciada: mensajes propios vs del cliente
+          </li>
+        </ul>
+      </div>
+      <div class="reveal-right">
+        <div class="mock-wrap">
+          <div class="mock-titlebar">
+            <div class="mock-dot bg-red-400"></div>
+            <div class="mock-dot bg-yellow-400"></div>
+            <div class="mock-dot bg-green-400"></div>
+            <span class="ml-2 text-slate-500 text-xs">Chat — María García</span>
+          </div>
+          <div class="bg-[#0b1120] flex" style="height: 240px;">
+            <!-- contacts -->
+            <div class="w-36 border-r border-white/5 p-2 space-y-1">
+              <div class="bg-indigo-500/15 rounded-lg p-2 flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">M</div>
+                <div class="text-xs overflow-hidden">
+                  <div class="text-white font-medium truncate">María G.</div>
+                  <div class="text-slate-500 truncate">García & Co.</div>
+                </div>
+              </div>
+              <div class="rounded-lg p-2 flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-violet-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 relative">
+                  J
+                  <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[9px] font-bold">2</span>
+                </div>
+                <div class="text-xs overflow-hidden">
+                  <div class="text-slate-400 font-medium truncate">Juan P.</div>
+                  <div class="text-slate-500 truncate">Tech Sol.</div>
+                </div>
+              </div>
+            </div>
+            <!-- thread -->
+            <div class="flex-1 flex flex-col">
+              <div class="flex-1 p-3 space-y-3 overflow-hidden">
+                <div class="flex justify-start">
+                  <div class="chat-bubble-demo bg-[#1e2640] text-slate-200 text-xs">
+                    Hola! ¿Cómo va el diseño?
+                  </div>
+                </div>
+                <div class="flex justify-end">
+                  <div class="chat-bubble-demo bg-indigo-600 text-white text-xs">
+                    Estamos en etapa 2, ya casi terminamos 🎨
+                  </div>
+                </div>
+                <div class="flex justify-start">
+                  <div class="chat-bubble-demo bg-[#1e2640] text-slate-200 text-xs">
+                    Perfecto, gracias por la info!
+                  </div>
+                </div>
+              </div>
+              <div class="border-t border-white/5 p-2 flex gap-2">
+                <div class="flex-1 bg-[#111827] rounded-lg px-3 py-1.5 text-xs text-slate-500">Escribí un mensaje...</div>
+                <div class="bg-indigo-500 text-white rounded-lg px-3 py-1.5 text-xs font-medium">Enviar</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider max-w-5xl mx-auto"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PORTAL CLIENTE
+═══════════════════════════════════════════════════════ -->
+<section id="cliente" class="py-24 px-6 overflow-hidden">
+  <div class="max-w-6xl mx-auto">
+
+    <div class="text-center mb-16">
+      <div class="reveal pill bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 mb-6">
+        👤 Portal del Cliente
+      </div>
+      <h2 class="reveal d1 text-4xl md:text-5xl font-black tracking-tight mb-4">
+        Tu cliente ve su progreso<br><span class="grad2">en tiempo real</span>
+      </h2>
+      <p class="reveal d2 text-slate-400 text-lg max-w-2xl mx-auto">
+        Cada cliente tiene acceso a su propio panel personalizado donde puede seguir el avance de su proyecto, ver sus reuniones y comunicarse directamente.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-16">
+
+      <div class="reveal glass rounded-2xl p-7 relative overflow-hidden">
+        <div class="radial-accent w-48 h-48 bg-indigo-600/15 -top-8 -right-8"></div>
+        <div class="feat-icon bg-indigo-500/15 mb-5 text-2xl">📊</div>
+        <h3 class="text-xl font-bold mb-3">Seguimiento del proyecto</h3>
+        <p class="text-slate-400 text-sm leading-relaxed mb-5">Barra de progreso en porcentaje, etapas con estados visuales y notas del equipo. El cliente sabe exactamente en qué punto está su proyecto.</p>
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs text-slate-500 mb-1">
+            <span>Progreso general</span>
+            <span class="text-indigo-400 font-bold">65%</span>
+          </div>
+          <div class="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style="width: 65%;"></div>
+          </div>
+          <div class="text-xs text-slate-500">2 de 4 etapas completadas</div>
+        </div>
+      </div>
+
+      <div class="reveal d1 glass rounded-2xl p-7 relative overflow-hidden">
+        <div class="radial-accent w-48 h-48 bg-emerald-600/10 -top-8 -right-8"></div>
+        <div class="feat-icon bg-emerald-500/15 mb-5 text-2xl">📅</div>
+        <h3 class="text-xl font-bold mb-3">Mis reuniones</h3>
+        <p class="text-slate-400 text-sm leading-relaxed mb-5">Listado de todas las reuniones programadas con fecha, hora, modalidad y link directo para unirse. Badges con la cantidad de reuniones pendientes.</p>
+        <div class="bg-white/4 rounded-xl p-3 space-y-2">
+          <div class="flex items-center gap-2 text-xs">
+            <span class="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded-full font-medium">💻 Virtual</span>
+            <span class="text-slate-400">Kickoff · 12 Jun 10:00</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full font-medium">🏢 Presencial</span>
+            <span class="text-slate-400">Entrega · 25 Jun 15:00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal d2 glass rounded-2xl p-7 relative overflow-hidden">
+        <div class="radial-accent w-48 h-48 bg-pink-600/10 -top-8 -right-8"></div>
+        <div class="feat-icon bg-pink-500/15 mb-5 text-2xl">💬</div>
+        <h3 class="text-xl font-bold mb-3">Chat con el equipo</h3>
+        <p class="text-slate-400 text-sm leading-relaxed mb-5">Canal directo de comunicación con el administrador. Mensajes en tiempo real con actualización automática y contador de no leídos.</p>
+        <div class="space-y-2">
+          <div class="chat-bubble-demo bg-[#1e2640] text-slate-200 text-xs self-start">
+            ¿Cuándo tendremos los primeros diseños?
+          </div>
+          <div class="chat-bubble-demo bg-indigo-600/80 text-white text-xs ml-auto">
+            Esta semana te los enviamos ✓
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- delivery feature -->
+    <div class="reveal glass rounded-2xl p-8 md:p-10 flex flex-col md:flex-row items-center gap-8">
+      <div class="flex-shrink-0 w-20 h-20 rounded-2xl bg-amber-500/15 border border-amber-500/20 flex items-center justify-center text-4xl">📥</div>
+      <div class="flex-1">
+        <h3 class="text-2xl font-black mb-2">Descarga del trabajo finalizado</h3>
+        <p class="text-slate-400 leading-relaxed">Cuando el trabajo está listo, el admin sube el link de Google Drive y el cliente ve automáticamente un botón prominente para descargar su entrega. Cero fricción en la entrega final.</p>
+      </div>
+      <div class="flex-shrink-0">
+        <div class="bg-amber-500 text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-amber-500/30">
+          <span>📥</span> Descargar mi trabajo
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider max-w-5xl mx-auto"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CÓMO FUNCIONA
+═══════════════════════════════════════════════════════ -->
+<section id="como-funciona" class="py-24 px-6">
+  <div class="max-w-5xl mx-auto">
+
+    <div class="text-center mb-16">
+      <div class="reveal pill bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 mb-6">
+        🚀 Flujo de trabajo
+      </div>
+      <h2 class="reveal d1 text-4xl md:text-5xl font-black tracking-tight mb-4">
+        En funcionamiento<br><span class="grad">en 4 pasos</span>
+      </h2>
+      <p class="reveal d2 text-slate-400 text-lg max-w-2xl mx-auto">
+        Desde onboarding hasta entrega, Track acompaña todo el ciclo de vida del proyecto.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-4 gap-6 relative">
+
+      <div class="reveal glass rounded-2xl p-6 text-center relative">
+        <div class="timeline-dot mx-auto mb-5">1</div>
+        <h3 class="font-bold text-lg mb-2">Creás el cliente</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Registrás los datos del cliente, su empresa y el servicio. Se genera automáticamente su acceso al portal.</p>
+      </div>
+
+      <div class="reveal d1 glass rounded-2xl p-6 text-center relative">
+        <div class="timeline-dot mx-auto mb-5">2</div>
+        <h3 class="font-bold text-lg mb-2">Asignás un workflow</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Elegís el proceso que corresponde al proyecto y lo asignás al cliente. Las etapas quedan visibles para ambos.</p>
+      </div>
+
+      <div class="reveal d2 glass rounded-2xl p-6 text-center relative">
+        <div class="timeline-dot mx-auto mb-5">3</div>
+        <h3 class="font-bold text-lg mb-2">Actualizás el progreso</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Conforme avanzás, marcás etapas como completadas y dejás notas. El cliente lo ve en tiempo real.</p>
+      </div>
+
+      <div class="reveal d3 glass rounded-2xl p-6 text-center">
+        <div class="timeline-dot mx-auto mb-5">4</div>
+        <h3 class="font-bold text-lg mb-2">Entregás el trabajo</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Subís el link de Google Drive. El cliente descarga su entrega con un click desde su panel personalizado.</p>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<div class="divider max-w-5xl mx-auto"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECURITY / AUTH
+═══════════════════════════════════════════════════════ -->
+<section class="py-24 px-6">
+  <div class="max-w-5xl mx-auto">
+    <div class="grid md:grid-cols-2 gap-12 items-center">
+
+      <div class="reveal-left">
+        <div class="reveal pill bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 mb-6 inline-flex">
+          🔒 Seguridad
+        </div>
+        <h2 class="text-4xl font-black tracking-tight mb-4">
+          Acceso seguro<br><span class="grad">para cada rol</span>
+        </h2>
+        <p class="text-slate-400 leading-relaxed mb-8">Autenticación basada en tokens JWT. Cada usuario (admin o cliente) accede únicamente a su propio panel. Sesión persistente y cierre seguro.</p>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="glass rounded-xl p-4">
+            <div class="text-2xl mb-2">🛡️</div>
+            <div class="font-semibold text-sm mb-1">Token JWT</div>
+            <div class="text-slate-500 text-xs">Autenticación sin estado y segura</div>
+          </div>
+          <div class="glass rounded-xl p-4">
+            <div class="text-2xl mb-2">👥</div>
+            <div class="font-semibold text-sm mb-1">Roles separados</div>
+            <div class="text-slate-500 text-xs">Admin y cliente con accesos distintos</div>
+          </div>
+          <div class="glass rounded-xl p-4">
+            <div class="text-2xl mb-2">🔐</div>
+            <div class="font-semibold text-sm mb-1">Sesión persistente</div>
+            <div class="text-slate-500 text-xs">Login automático con token válido</div>
+          </div>
+          <div class="glass rounded-xl p-4">
+            <div class="text-2xl mb-2">🚪</div>
+            <div class="font-semibold text-sm mb-1">Cierre seguro</div>
+            <div class="text-slate-500 text-xs">Logout limpia sesión completamente</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal-right">
+        <div class="mock-wrap">
+          <div class="mock-titlebar">
+            <div class="mock-dot bg-red-400"></div>
+            <div class="mock-dot bg-yellow-400"></div>
+            <div class="mock-dot bg-green-400"></div>
+            <span class="ml-2 text-slate-500 text-xs">Inicio de sesión</span>
+          </div>
+          <div class="bg-[#0b1120] p-8 flex flex-col items-center">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-xl shadow-indigo-500/40 mb-4">
+              <svg class="w-8 h-8" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="3.5" cy="15" r="2" fill="white" opacity="0.5"/>
+                <circle cx="10" cy="9" r="2" fill="white" opacity="0.8"/>
+                <circle cx="16.5" cy="3.5" r="2.5" fill="white"/>
+                <path d="M3.5 15 L10 9 L16.5 3.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3 class="text-white font-bold text-lg mb-1">Track</h3>
+            <p class="text-slate-500 text-sm mb-6">Ingresá a tu cuenta</p>
+            <div class="w-full max-w-xs space-y-3">
+              <div class="bg-[#111827] rounded-xl px-4 py-3 text-xs">
+                <div class="text-slate-500 mb-1 text-xs">📧 Email</div>
+                <div class="text-slate-300">usuario@empresa.com</div>
+              </div>
+              <div class="bg-[#111827] rounded-xl px-4 py-3 text-xs">
+                <div class="text-slate-500 mb-1 text-xs">🔐 Contraseña</div>
+                <div class="text-slate-300">••••••••</div>
+              </div>
+              <div class="btn-glow text-white text-sm font-semibold py-3 rounded-xl text-center w-full">
+                Ingresar al sistema
+              </div>
+              <div class="text-center text-slate-600 text-xs">🔒 Conexión segura</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider max-w-5xl mx-auto"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     RESUMEN DE FUNCIONES
+═══════════════════════════════════════════════════════ -->
+<section class="py-24 px-6">
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center mb-14">
+      <div class="reveal pill bg-violet-500/10 border border-violet-500/25 text-violet-300 mb-6">
+        📋 Resumen completo
+      </div>
+      <h2 class="reveal d1 text-4xl md:text-5xl font-black tracking-tight">
+        Todo incluido en<br><span class="grad">un solo sistema</span>
+      </h2>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8">
+
+      <div class="reveal glass rounded-2xl p-8">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-xl">🛡️</div>
+          <h3 class="text-xl font-bold">Panel Administrador</h3>
+        </div>
+        <ul class="space-y-3">
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-indigo-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Dashboard</span> — Métricas generales con tabla de clientes recientes</div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-indigo-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Gestión de Clientes</span> — CRUD completo con búsqueda y filtros</div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-indigo-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Workflows</span> — Crear, asignar y actualizar procesos por etapas</div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-indigo-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Reuniones</span> — Calendario + lista, virtual/presencial</div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-indigo-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Chat</span> — Mensajería privada por cliente con badges</div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-indigo-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Entrega</span> — Link de descarga visible al cliente</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="reveal d1 glass rounded-2xl p-8">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center text-xl">👤</div>
+          <h3 class="text-xl font-bold">Portal del Cliente</h3>
+        </div>
+        <ul class="space-y-3">
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-cyan-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Progreso</span> — Barra visual, etapas y porcentaje de avance</div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-cyan-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Mis Reuniones</span> — Próximas reuniones con links/dirección</div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-cyan-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Chat</span> — Comunicación directa con el equipo</div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-cyan-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Información</span> — Datos de empresa, email y teléfono visibles</div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-cyan-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Descarga</span> — Botón destacado cuando el trabajo está listo</div>
+          </li>
+          <li class="flex items-start gap-3 text-sm">
+            <span class="text-cyan-400 mt-0.5 flex-shrink-0">◆</span>
+            <div><span class="text-white font-medium">Badges</span> — Contador de reuniones y mensajes no leídos</div>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider max-w-5xl mx-auto"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CTA
+═══════════════════════════════════════════════════════ -->
+<section id="contacto" class="py-28 px-6 relative overflow-hidden">
+  <div class="radial-accent w-[600px] h-[600px] bg-indigo-600/20 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+
+  <div class="max-w-3xl mx-auto text-center">
+    <div class="reveal pill bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 mb-8 inline-flex">
+      ✨ ¿Listo para empezar?
+    </div>
+    <h2 class="reveal d1 text-4xl md:text-6xl font-black tracking-tight mb-6">
+      Gestioná tu negocio<br><span class="grad">como un profesional</span>
+    </h2>
+    <p class="reveal d2 text-slate-400 text-lg leading-relaxed mb-10 max-w-xl mx-auto">
+      Centralizá clientes, proyectos, reuniones y comunicación en una única plataforma. Tu operación, organizada.
+    </p>
+    <div class="reveal d3 flex flex-col sm:flex-row gap-4 justify-center">
+      <a href="mailto:gonzalotorres2011@gmail.com" class="btn-glow text-white font-bold px-10 py-4 rounded-2xl text-base inline-flex items-center gap-2">
+        Solicitar una demo
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════════════ -->
+<footer class="py-10 px-6 border-t border-white/5">
+  <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-600">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
+        <svg class="w-4 h-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="3.5" cy="15" r="2" fill="white" opacity="0.5"/>
+          <circle cx="10" cy="9" r="2" fill="white" opacity="0.8"/>
+          <circle cx="16.5" cy="3.5" r="2.5" fill="white"/>
+          <path d="M3.5 15 L10 9 L16.5 3.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="font-semibold text-slate-400">Track</span>
+      <span>— Gestión de Servicios</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+      Sistema activo v1.0
+    </div>
+  </div>
+</footer>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════════ -->
+<script>
+  // ── Canvas particle background ──────────────────────
+  (function(){
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, particles = [];
+    const N = 60;
+
+    function resize(){
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+
+    function Particle(){
+      this.x = Math.random() * W;
+      this.y = Math.random() * H;
+      this.r = Math.random() * 1.5 + 0.3;
+      this.vx = (Math.random() - .5) * .25;
+      this.vy = (Math.random() - .5) * .25;
+      this.alpha = Math.random() * .5 + .1;
+    }
+
+    function init(){
+      resize();
+      particles = Array.from({length: N}, () => new Particle());
+    }
+
+    function draw(){
+      ctx.clearRect(0, 0, W, H);
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if(p.x < 0) p.x = W; if(p.x > W) p.x = 0;
+        if(p.y < 0) p.y = H; if(p.y > H) p.y = 0;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(99,102,241,${p.alpha})`;
+        ctx.fill();
+      });
+
+      // draw lines between nearby particles
+      for(let i = 0; i < particles.length; i++){
+        for(let j = i+1; j < particles.length; j++){
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if(dist < 130){
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(99,102,241,${.08 * (1 - dist/130)})`;
+            ctx.lineWidth = .6;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    init();
+    draw();
+  })();
+
+
+  // ── Scroll reveal ────────────────────────────────────
+  const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if(e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  revealEls.forEach(el => observer.observe(el));
+
+
+  // ── Counter animation ────────────────────────────────
+  function animateCounter(el, target, suffix=''){
+    let current = 0;
+    const increment = target / 60;
+    const timer = setInterval(() => {
+      current += increment;
+      if(current >= target){
+        current = target;
+        clearInterval(timer);
+      }
+      el.textContent = Math.floor(current) + suffix;
+    }, 20);
+  }
+
+  const counterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if(e.isIntersecting){
+        const target = parseInt(e.target.dataset.target);
+        const suffix = target === 100 ? '%' : (target === 8 ? 's' : '');
+        animateCounter(e.target, target, suffix);
+        counterObserver.unobserve(e.target);
+      }
+    });
+  }, { threshold: .5 });
+  document.querySelectorAll('.counter[data-target]').forEach(el => counterObserver.observe(el));
+
+
+  // ── Smooth active nav on scroll ──────────────────────
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav a[href^="#"]');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if(window.scrollY >= s.offsetTop - 120) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.classList.toggle('text-white', a.getAttribute('href') === '#' + current);
+      a.classList.toggle('text-slate-400', a.getAttribute('href') !== '#' + current);
+    });
+  });
+</script>
+
+</body>
+</html>
